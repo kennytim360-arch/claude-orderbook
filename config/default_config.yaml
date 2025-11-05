@@ -1,0 +1,175 @@
+# RORO Trading System - Default Configuration
+
+# Data Settings
+data:
+  # Timeframe: '5min', '15min', '1h' (5min recommended)
+  timeframe: '5min'
+
+  # Assets to track
+  assets:
+    - SPY  # S&P 500 ETF
+    - TLT  # 20+ Year Treasury Bond ETF
+    - GLD  # Gold ETF
+    - HYG  # High Yield Corporate Bond ETF
+
+  # Data sources (in priority order)
+  sources:
+    primary: 'yahoo'      # Yahoo Finance (free)
+    backup: 'alphavantage'  # Alpha Vantage (requires API key)
+
+  # Historical data settings
+  historical_period: '6mo'  # Download last 6 months
+
+  # Data quality
+  max_price_change_pct: 5.0  # Flag if price changes >5% in one bar
+  max_gap_minutes: 15        # Skip if data gap >15 minutes
+
+# Signal Engine Settings
+signals:
+  # Moving Average periods (in bars)
+  fast_ma_period: 5   # 5 bars (25 minutes on 5-min timeframe)
+  slow_ma_period: 15  # 15 bars (75 minutes on 5-min timeframe)
+
+  # Consensus requirement
+  consensus_required: 2  # Need 2 out of 3 pillars to agree
+  consensus_window_bars: 5  # Signals must align within 5 bars
+
+  # Momentum filter (RSI)
+  rsi_period: 14
+  rsi_bullish_threshold: 50  # RSI > 50 for long entries
+  rsi_bearish_threshold: 50  # RSI < 50 for short entries
+
+# Risk Management Settings
+risk:
+  # Position sizing
+  risk_per_trade_pct: 1.0     # Risk 1% of account per trade
+  max_risk_per_trade_pct: 2.0 # Never exceed 2%
+
+  # Leverage limits
+  default_leverage: 5.0
+  max_leverage: 5.0
+
+  # Stop loss and take profit (percentage of entry price)
+  stop_loss_pct: 0.5     # 0.5% stop loss (wider for 5-min than 1-min)
+  take_profit_pct: 1.0   # 1.0% take profit (1:2 risk:reward)
+
+  # Drawdown limits
+  daily_loss_limit_pct: 5.0    # Stop trading if down 5% in one day
+  weekly_loss_limit_pct: 10.0  # Stop trading if down 10% in one week
+  monthly_loss_limit_pct: 15.0 # Re-evaluate if down 15% in one month
+
+  # Cooldown periods (in minutes)
+  cooldown_after_stop_loss: 30   # Wait 30 min after stop loss
+  cooldown_after_take_profit: 10 # Wait 10 min after take profit
+
+# Trading Hours (Eastern Time)
+trading:
+  market_open: '09:30'
+  market_close: '16:00'
+
+  # Optimal trading windows (based on volume/volatility)
+  preferred_windows:
+    - start: '10:00'
+      end: '11:30'
+    - start: '14:00'
+      end: '15:30'
+
+  # Close all positions before market close
+  close_all_by: '15:45'
+
+# Backtesting Settings
+backtest:
+  # Friction modeling
+  spread_pct:
+    SPY: 0.002  # 0.002% spread
+    TLT: 0.003
+    GLD: 0.002
+    HYG: 0.005
+
+  slippage_pct: 0.01  # 0.01% slippage on market orders
+  commission_per_trade: 0.0  # $0 (Trading 212 is commission-free)
+
+  # Initial capital for backtesting
+  initial_capital: 1000
+
+  # Performance metrics to calculate
+  metrics:
+    - total_return
+    - win_rate
+    - sharpe_ratio
+    - max_drawdown
+    - profit_factor
+    - avg_trade_duration
+    - trades_per_day
+
+# Alerts Settings
+alerts:
+  # Enable/disable alert types
+  desktop_notifications: true
+  sound_alerts: true
+  email_alerts: false  # Requires email config in .env
+  sms_alerts: false    # Requires Twilio config in .env
+
+  # Alert priority (which events trigger which alerts)
+  critical:  # Sound + Desktop + Email/SMS
+    - consensus_signal
+    - stop_loss_hit
+    - daily_limit_reached
+
+  warning:  # Desktop + Sound
+    - consensus_broken
+    - position_underwater
+
+  info:  # Desktop only
+    - take_profit_hit
+    - trade_closed
+
+# Logging Settings
+logging:
+  level: 'INFO'  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+
+  # Log to file
+  file_logging: true
+  log_file_path: 'data/logs/system.log'
+
+  # Log rotation
+  max_log_size_mb: 10
+  backup_count: 5
+
+  # What to log
+  log_data_fetches: true
+  log_signals: true
+  log_trades: true
+  log_performance: true
+
+# Database Settings
+database:
+  type: 'sqlite'
+  path: 'data/database/trading.db'
+
+  # Tables to create
+  tables:
+    - market_data
+    - signals
+    - trades
+    - performance
+    - alerts
+
+# Dashboard Settings
+dashboard:
+  # Update frequency (in seconds)
+  update_interval: 60  # Update every 60 seconds
+
+  # Port for web dashboard
+  port: 8050
+
+  # Theme
+  theme: 'dark'  # 'dark' or 'light'
+
+  # Charts to display
+  charts:
+    - ratio_tlt_spy
+    - ratio_gld_spy
+    - ratio_hyg_tlt
+    - spy_price
+    - equity_curve
