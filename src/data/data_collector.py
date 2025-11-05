@@ -70,6 +70,9 @@ class DataCollector:
                 logger.warning(f"No data received for {symbol} from Yahoo Finance")
                 return None
 
+            # Normalize column names to title case
+            df.columns = df.columns.str.title()
+
             logger.info(f"✓ Downloaded {len(df)} bars for {symbol} ({df.index[0]} to {df.index[-1]})")
 
             # Store in database
@@ -113,6 +116,9 @@ class DataCollector:
                 parse_dates=[date_column] if parse_dates else None,
                 index_col=date_column if parse_dates else None
             )
+
+            # Normalize column names to title case
+            df.columns = df.columns.str.title()
 
             # Validate required columns
             required_cols = ['Open', 'High', 'Low', 'Close']
@@ -158,6 +164,9 @@ class DataCollector:
             if df.empty:
                 logger.warning(f"No data found in database for {symbol}")
                 return None
+
+            # Normalize column names to title case
+            df.columns = df.columns.str.title()
 
             logger.info(f"✓ Loaded {len(df)} bars for {symbol} from database")
 
