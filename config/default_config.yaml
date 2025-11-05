@@ -67,6 +67,11 @@ trading:
   market_open: '09:30'
   market_close: '16:00'
 
+  # Trading mode: 'long_only', 'short_only', or 'both'
+  # IMPORTANT: Backtest shows LONG-only is +32% vs -4% for both
+  # SHORT trades have only 36.7% win rate - avoid them!
+  mode: 'long_only'
+
   # Optimal trading windows (based on volume/volatility)
   preferred_windows:
     - start: '10:00'
