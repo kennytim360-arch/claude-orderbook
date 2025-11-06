@@ -54,8 +54,13 @@ def pick_best_safe_haven(latest):
     tlt_price = float(latest.get('tlt_price'))
     gld_price = float(latest.get('gld_price'))
 
-    tlt_spy_signal = int(latest.get('pillar_tlt_spy', 0))
-    gld_spy_signal = int(latest.get('pillar_gld_spy', 0))
+    # Convert pillar signals to numeric scores
+    # RISK-OFF = +1 (bullish for safe haven), RISK-ON = -1, NEUTRAL = 0
+    tlt_spy_signal_str = latest.get('pillar_tlt_spy', 'NEUTRAL')
+    gld_spy_signal_str = latest.get('pillar_gld_spy', 'NEUTRAL')
+
+    tlt_spy_signal = 1 if tlt_spy_signal_str == 'RISK-OFF' else (-1 if tlt_spy_signal_str == 'RISK-ON' else 0)
+    gld_spy_signal = 1 if gld_spy_signal_str == 'RISK-OFF' else (-1 if gld_spy_signal_str == 'RISK-ON' else 0)
 
     data = latest.get('_raw_data', {})
     tlt_momentum = 0.0
