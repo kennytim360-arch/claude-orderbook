@@ -41,7 +41,50 @@ def get_signal_summary():
     signals = signal_engine.generate_signals(data)
     latest = signal_engine.get_latest_signal(signals)
 
+    # Add raw data for intelligent asset selection
+    latest['_raw_data'] = data
+
     return latest
+
+def pick_best_safe_haven(latest):
+    """
+    Intelligently pick between TLT and GLD based on strength.
+
+    Returns: (asset_name, entry_price, reason)
+    """
+    tlt_price = latest.get('tlt_price')
+    gld_price = latest.get('gld_price')
+
+    # Get ratio signals to see which is stronger (1 = bullish, -1 = bearish)
+    tlt_spy_signal = latest.get('pillar_tlt_spy', 0)
+    gld_spy_signal = latest.get('pillar_gld_spy', 0)
+
+    # Calculate recent momentum from raw data if available
+    data = latest.get('_raw_data', {})
+    tlt_momentum = 0
+    gld_momentum = 0
+
+    if 'TLT' in data and 'GLD' in data:
+        # Calculate 5-period momentum
+        tlt_df = data['TLT']
+        gld_df = data['GLD']
+
+        if len(tlt_df) >= 5:
+            tlt_momentum = (tlt_df['Close'].iloc[-1] / tlt_df['Close'].iloc[-5] - 1) * 100
+        if len(gld_df) >= 5:
+            gld_momentum = (gld_df['Close'].iloc[-1] / gld_df['Close'].iloc[-5] - 1) * 100
+
+    # Score each asset (ratio signal + momentum/2)
+    tlt_score = tlt_spy_signal + (tlt_momentum / 2)
+    gld_score = gld_spy_signal + (gld_momentum / 2)
+
+    # Pick the stronger one
+    if gld_score > tlt_score:
+        reason = f"GLD stronger (score: {gld_score:.1f} vs TLT: {tlt_score:.1f})"
+        return 'GLD', gld_price, reason
+    else:
+        reason = f"TLT stronger (score: {tlt_score:.1f} vs GLD: {gld_score:.1f})"
+        return 'TLT', tlt_price, reason
 
 def display_signal(latest):
     """Display signal in compact format"""
@@ -51,7 +94,6 @@ def display_signal(latest):
     tlt_price = latest.get('tlt_price', spy_price)
     gld_price = latest.get('gld_price', spy_price)
 
-    safe_haven_asset = config.get('trading.safe_haven_asset', 'TLT')
     timestamp = datetime.now().strftime('%H:%M:%S')
 
     print(f"\n[{timestamp}] Consensus: {consensus:10s} | SPY RSI: {spy_rsi:5.1f} | ", end="")
@@ -62,18 +104,11 @@ def display_signal(latest):
         return 'RISK-ON', 'SPY', spy_price, sizing
 
     elif consensus == 'RISK-OFF' and spy_rsi < 50:
-        if safe_haven_asset == 'TLT':
-            entry_price = tlt_price
-            asset_name = 'TLT'
-        elif safe_haven_asset == 'GLD':
-            entry_price = gld_price
-            asset_name = 'GLD'
-        else:
-            print(f"🟡 WAIT (safe haven disabled)")
-            return 'RISK-OFF', 'NONE', 0, None
+        # INTELLIGENTLY PICK BETWEEN TLT AND GLD
+        asset_name, entry_price, reason = pick_best_safe_haven(latest)
 
         sizing = calculate_position_sizing(entry_price)
-        print(f"🔴 LONG {asset_name} @ ${entry_price:.2f} ({sizing['shares']} shares)")
+        print(f"🔴 LONG {asset_name} @ ${entry_price:.2f} ({sizing['shares']} shares) - {reason}")
         return 'RISK-OFF', asset_name, entry_price, sizing
 
     else:
@@ -81,12 +116,12 @@ def display_signal(latest):
         return 'NEUTRAL', 'NONE', 0, None
 
 print("\n" + "="*80)
-print("               RORO SIGNAL MONITOR (Updates every 60 seconds)")
+print("           RORO SIGNAL MONITOR (Updates every 60 seconds)")
 print("="*80)
 print("\nWatching for signal changes... Press Ctrl+C to stop\n")
-print("Legend:")
+print("💡 INTELLIGENT ASSET SELECTION:")
 print("  🟢 RISK-ON  = LONG SPY")
-print("  🔴 RISK-OFF = LONG TLT/GLD")
+print("  🔴 RISK-OFF = Automatically picks BEST between TLT & GLD")
 print("  🟡 NEUTRAL  = WAIT")
 print("\n" + "="*80)
 

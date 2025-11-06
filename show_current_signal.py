@@ -32,6 +32,45 @@ def calculate_position_sizing(entry_price, account_size=10000, risk_percent=1.0,
         'risk_amount': risk_amount
     }
 
+def pick_best_safe_haven(latest, data):
+    """
+    Intelligently pick between TLT and GLD based on strength.
+
+    Returns: (asset_name, entry_price, reason)
+    """
+    tlt_price = latest.get('tlt_price')
+    gld_price = latest.get('gld_price')
+
+    # Get ratio signals to see which is stronger (1 = bullish, -1 = bearish)
+    tlt_spy_signal = latest.get('pillar_tlt_spy', 0)
+    gld_spy_signal = latest.get('pillar_gld_spy', 0)
+
+    # Calculate recent momentum
+    tlt_momentum = 0
+    gld_momentum = 0
+
+    if 'TLT' in data and 'GLD' in data:
+        # Calculate 5-period momentum
+        tlt_df = data['TLT']
+        gld_df = data['GLD']
+
+        if len(tlt_df) >= 5:
+            tlt_momentum = (tlt_df['Close'].iloc[-1] / tlt_df['Close'].iloc[-5] - 1) * 100
+        if len(gld_df) >= 5:
+            gld_momentum = (gld_df['Close'].iloc[-1] / gld_df['Close'].iloc[-5] - 1) * 100
+
+    # Score each asset (ratio signal + momentum)
+    tlt_score = tlt_spy_signal + (tlt_momentum / 2)
+    gld_score = gld_spy_signal + (gld_momentum / 2)
+
+    # Pick the stronger one
+    if gld_score > tlt_score:
+        reason = f"GLD is stronger (score: {gld_score:.1f} vs TLT: {tlt_score:.1f})"
+        return 'GLD', gld_price, reason, gld_score, tlt_score
+    else:
+        reason = f"TLT is stronger (score: {tlt_score:.1f} vs GLD: {gld_score:.1f})"
+        return 'TLT', tlt_price, reason, tlt_score, gld_score
+
 print("\n" + "="*80)
 print("                    RORO TRADING SYSTEM - CURRENT SIGNAL")
 print("="*80)
@@ -76,7 +115,7 @@ try:
 
     print(f"\n🎯 CONSENSUS:      {consensus}")
     print(f"💰 ACCOUNT SIZE:   ${account_size:,.0f}")
-    print(f"🛡️  SAFE HAVEN:    {safe_haven_asset}")
+    print(f"🤖 AUTO-SELECT:    BEST asset chosen intelligently")
 
     # Determine action
     print("\n" + "="*80)
@@ -105,21 +144,8 @@ try:
         """)
 
     elif consensus == 'RISK-OFF' and spy_rsi < 50:
-        # LONG TLT or GLD
-        if safe_haven_asset == 'TLT':
-            entry_price = tlt_price
-            asset_name = 'TLT'
-        elif safe_haven_asset == 'GLD':
-            entry_price = gld_price
-            asset_name = 'GLD'
-        else:
-            print("🟡 SIGNAL: RISK-OFF")
-            print("="*80)
-            print("\n⚠️  NO TRADE - Safe haven trading disabled in config")
-            print("\nTo enable, edit config/default_config.yaml:")
-            print("   trading:")
-            print("     safe_haven_asset: 'TLT'  # or 'GLD'")
-            sys.exit(0)
+        # INTELLIGENTLY PICK BETWEEN TLT AND GLD
+        asset_name, entry_price, reason, winner_score, loser_score = pick_best_safe_haven(latest, data)
 
         sizing = calculate_position_sizing(entry_price, account_size)
 
@@ -138,6 +164,8 @@ try:
 
    💰 POSITION SIZE:  {format_price(sizing['position_value'])}
    ⚠️  RISK AMOUNT:   {format_price(sizing['risk_amount'])}  (1% of account)
+
+   🤖 WHY {asset_name}?        {reason}
 
    ✅ EXECUTE THIS TRADE NOW
         """)
@@ -161,10 +189,11 @@ try:
     print("="*80)
     print("\n💡 TIP: Run this script anytime with:")
     print("   python show_current_signal.py")
-    print("\n📈 STRATEGY: RORO (Risk-On/Risk-Off) Day Trading")
+    print("\n📈 STRATEGY: RORO (Risk-On/Risk-Off) with Intelligent Asset Selection")
     print("   - RISK-ON  + RSI>50  → LONG SPY")
-    print(f"   - RISK-OFF + RSI<50  → LONG {safe_haven_asset}")
+    print("   - RISK-OFF + RSI<50  → LONG TLT or GLD (automatically picks BEST)")
     print("   - NEUTRAL            → WAIT")
+    print("\n🤖 INTELLIGENT SELECTION: System compares TLT vs GLD strength and picks winner")
     print("="*80 + "\n")
 
 except Exception as e:
