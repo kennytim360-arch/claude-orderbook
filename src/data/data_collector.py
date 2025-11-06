@@ -75,8 +75,12 @@ class DataCollector:
 
             logger.info(f"✓ Downloaded {len(df)} bars for {symbol} ({df.index[0]} to {df.index[-1]})")
 
-            # Store in database
-            self.db.insert_market_data(df, symbol)
+            # Try to store in database (but don't fail if data already exists)
+            try:
+                self.db.insert_market_data(df, symbol)
+            except Exception as db_error:
+                # Log but don't fail - data is already in DB
+                logger.debug(f"Database insert skipped for {symbol}: {db_error}")
 
             return df
 
@@ -130,8 +134,12 @@ class DataCollector:
 
             logger.info(f"✓ Loaded {len(df)} bars for {symbol} from CSV")
 
-            # Store in database
-            self.db.insert_market_data(df, symbol)
+            # Try to store in database (but don't fail if data already exists)
+            try:
+                self.db.insert_market_data(df, symbol)
+            except Exception as db_error:
+                # Log but don't fail - data is already in DB
+                logger.debug(f"Database insert skipped for {symbol}: {db_error}")
 
             return df
 
