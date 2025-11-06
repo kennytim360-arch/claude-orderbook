@@ -462,7 +462,7 @@ class RORODashboard:
         print(f"   Open your browser to: http://localhost:{port}")
         print(f"   Press Ctrl+C to stop\n")
 
-        self.app.run_server(debug=debug, port=port, host='0.0.0.0')
+        self.app.run(debug=debug, port=port, host='0.0.0.0')
 
 
 if __name__ == "__main__":
