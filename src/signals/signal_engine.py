@@ -294,6 +294,8 @@ class SignalEngine:
             'consensus_count': latest['consensus_count'],
             'pillars': latest['consensus_pillars'],
             'spy_price': latest['spy_price'],
+            'tlt_price': latest.get('tlt_price', latest['spy_price']),
+            'gld_price': latest.get('gld_price', latest['spy_price']),
             'spy_rsi': latest['spy_rsi'],
             'pillar_tlt_spy': latest['pillar_tlt_spy'],
             'pillar_gld_spy': latest['pillar_gld_spy'],

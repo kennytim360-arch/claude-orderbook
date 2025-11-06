@@ -171,6 +171,13 @@ class RORODashboard:
         spy_price = latest_signal['spy_price']
         spy_rsi = latest_signal['spy_rsi']
 
+        # Get safe haven asset from config
+        safe_haven_asset = config.get('trading.safe_haven_asset', 'TLT')
+
+        # Get prices for all assets
+        tlt_price = latest_signal.get('tlt_price', spy_price)  # fallback to spy_price if not available
+        gld_price = latest_signal.get('gld_price', spy_price)
+
         # Colors
         green = '#00ff41'
         red = '#ff3366'
@@ -182,34 +189,66 @@ class RORODashboard:
         take_profit_pct = 1.0  # 1.0%
         risk_per_trade_pct = 1.0  # 1% of account
 
-        entry_price = spy_price
-        stop_loss = entry_price * (1 - stop_loss_pct / 100)
-        take_profit = entry_price * (1 + take_profit_pct / 100)
-
-        # Position sizing
-        risk_amount = self.account_size * (risk_per_trade_pct / 100)
-        stop_distance = entry_price - stop_loss
-        position_size = int(risk_amount / stop_distance) if stop_distance > 0 else 0
-        position_value = position_size * entry_price
-
-        # Determine action
+        # Determine action and which asset to trade
         if consensus == 'RISK-ON' and spy_rsi > 50:
+            # LONG SPY on RISK-ON
             action = 'BUY'
-            action_text = 'ENTER LONG POSITION'
+            trading_asset = 'SPY'
+            action_text = 'LONG SPY NOW'
             bg_color = green
             text_color = '#000'
+            entry_price = spy_price
+            stop_loss = entry_price * (1 - stop_loss_pct / 100)
+            take_profit = entry_price * (1 + take_profit_pct / 100)
+            risk_amount = self.account_size * (risk_per_trade_pct / 100)
+            stop_distance = entry_price - stop_loss
+            position_size = int(risk_amount / stop_distance) if stop_distance > 0 else 0
+            position_value = position_size * entry_price
             instruction = f'BUY {position_size} SHARES OF SPY AT ${entry_price:.2f}'
+        elif consensus == 'RISK-OFF' and spy_rsi < 50 and safe_haven_asset != 'none':
+            # LONG Safe Haven (TLT or GLD) on RISK-OFF
+            action = 'BUY'
+            trading_asset = safe_haven_asset
+            action_text = f'LONG {safe_haven_asset} NOW'
+            bg_color = red
+            text_color = '#fff'
+            entry_price = tlt_price if safe_haven_asset == 'TLT' else gld_price
+            stop_loss = entry_price * (1 - stop_loss_pct / 100)
+            take_profit = entry_price * (1 + take_profit_pct / 100)
+            risk_amount = self.account_size * (risk_per_trade_pct / 100)
+            stop_distance = entry_price - stop_loss
+            position_size = int(risk_amount / stop_distance) if stop_distance > 0 else 0
+            position_value = position_size * entry_price
+            instruction = f'BUY {position_size} SHARES OF {safe_haven_asset} AT ${entry_price:.2f}'
         elif consensus == 'RISK-OFF':
+            # RISK-OFF but safe haven disabled
             action = 'FLAT'
+            trading_asset = 'NONE'
             action_text = 'STAY FLAT / EXIT LONGS'
             bg_color = red
             text_color = '#fff'
-            instruction = f'DO NOT ENTER - RISK-OFF ENVIRONMENT'
+            entry_price = spy_price
+            stop_loss = 0
+            take_profit = 0
+            risk_amount = 0
+            position_size = 0
+            position_value = 0
+            stop_distance = 0
+            instruction = f'RISK-OFF - EXIT LONGS (safe_haven={safe_haven_asset})'
         else:
+            # NEUTRAL
             action = 'WAIT'
+            trading_asset = 'NONE'
             action_text = 'NO CLEAR SIGNAL - WAIT'
             bg_color = orange
             text_color = '#000'
+            entry_price = spy_price
+            stop_loss = 0
+            take_profit = 0
+            risk_amount = 0
+            position_size = 0
+            position_value = 0
+            stop_distance = 0
             instruction = 'NEUTRAL - WAIT FOR 2/3 CONSENSUS'
 
         return html.Div([
