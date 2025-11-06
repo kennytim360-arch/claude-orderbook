@@ -31,7 +31,8 @@ def calculate_position_sizing(entry_price, account_size=10000, risk_percent=1.0,
 def get_signal_summary():
     """Get current signal summary"""
     collector = DataCollector()
-    data = collector.download_all_assets(period='5d')
+    # Force refresh to get LIVE data from Yahoo Finance
+    data = collector.download_all_assets(period='5d', force_refresh=True)
 
     if len(data) < 4:
         return None

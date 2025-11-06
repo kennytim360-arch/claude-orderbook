@@ -38,9 +38,10 @@ print("="*80)
 
 try:
     # Load data and generate signals
-    print("\nLoading market data...")
+    print("\nLoading LIVE market data from Yahoo Finance...")
     collector = DataCollector()
-    data = collector.download_all_assets(period='5d')
+    # Force refresh to get LIVE data from Yahoo Finance
+    data = collector.download_all_assets(period='5d', force_refresh=True)
 
     if len(data) < 4:
         print("❌ ERROR: Failed to load market data")
