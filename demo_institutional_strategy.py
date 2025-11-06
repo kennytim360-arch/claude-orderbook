@@ -23,9 +23,9 @@ print("="*90)
 
 try:
     # Load data
-    print("\n📊 Loading market data...")
+    print("\n📊 Loading LIVE market data from Yahoo Finance...")
     collector = DataCollector()
-    data = collector.download_all_assets(period='5d', force_refresh=False)
+    data = collector.download_all_assets(period='5d', force_refresh=True)
 
     if len(data) < 4:
         print("❌ ERROR: Failed to load data")
