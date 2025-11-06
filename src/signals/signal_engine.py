@@ -256,8 +256,10 @@ class SignalEngine:
             'consensus_count': consensus_counts,
             'consensus_pillars': consensus_pillars,
 
-            # SPY data
+            # Asset prices (for dashboard display)
             'spy_price': spy['Close'],
+            'tlt_price': tlt['Close'],
+            'gld_price': gld['Close'],
             'spy_rsi': spy_rsi
         }, index=common_index)
 
