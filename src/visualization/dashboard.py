@@ -14,6 +14,7 @@ from datetime import datetime
 
 from src.data.data_collector import DataCollector
 from src.signals.signal_engine import SignalEngine
+from src.alerts.alert_manager import AlertManager
 from src.utils.logger import logger
 from src.utils.config_loader import config
 
@@ -21,12 +22,13 @@ from src.utils.config_loader import config
 class RORODashboard:
     """Real-time dashboard for RORO trading system."""
 
-    def __init__(self, update_interval_seconds=60):
+    def __init__(self, update_interval_seconds=60, enable_alerts=True):
         """
         Initialize dashboard.
 
         Args:
             update_interval_seconds: How often to refresh data (seconds)
+            enable_alerts: Enable desktop/sound alerts
         """
         self.app = dash.Dash(__name__)
         self.update_interval = update_interval_seconds * 1000  # Convert to ms
@@ -34,13 +36,25 @@ class RORODashboard:
         self.data_collector = DataCollector()
         self.signal_engine = SignalEngine()
 
+        # Alert system
+        self.enable_alerts = enable_alerts
+        if enable_alerts:
+            self.alert_manager = AlertManager(
+                desktop_enabled=config.get('alerts.desktop_notifications', True),
+                sound_enabled=config.get('alerts.sound_alerts', True),
+                email_enabled=config.get('alerts.email_alerts', False)
+            )
+        else:
+            self.alert_manager = None
+
         self.current_data = None
         self.current_signals = None
+        self.previous_consensus = None  # Track signal changes
 
         self._setup_layout()
         self._setup_callbacks()
 
-        logger.info("Dashboard initialized")
+        logger.info(f"Dashboard initialized (alerts={'enabled' if enable_alerts else 'disabled'})")
 
     def _setup_layout(self):
         """Set up the dashboard layout."""
@@ -125,6 +139,25 @@ class RORODashboard:
 
                 # Get latest signal
                 latest = self.signal_engine.get_latest_signal(self.current_signals)
+
+                # Trigger alerts on signal change
+                if self.enable_alerts and self.alert_manager:
+                    current_consensus = latest['consensus']
+
+                    # Check if consensus changed
+                    if self.previous_consensus != current_consensus:
+                        if current_consensus in ['RISK-ON', 'RISK-OFF']:
+                            # Alert on new consensus signal
+                            self.alert_manager.alert_consensus_signal(
+                                consensus=current_consensus,
+                                pillars=latest['pillars'],
+                                spy_price=latest['spy_price'],
+                                spy_rsi=latest['spy_rsi']
+                            )
+                            logger.info(f"🔔 Alert sent: {current_consensus} signal")
+
+                    # Update previous consensus
+                    self.previous_consensus = current_consensus
 
                 # Create components
                 banner = self._create_signal_banner(latest)
