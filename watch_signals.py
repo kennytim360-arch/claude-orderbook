@@ -52,17 +52,18 @@ def pick_best_safe_haven(latest):
 
     Returns: (asset_name, entry_price, reason)
     """
-    tlt_price = latest.get('tlt_price')
-    gld_price = latest.get('gld_price')
+    # Convert to Python float to avoid numpy type issues
+    tlt_price = float(latest.get('tlt_price'))
+    gld_price = float(latest.get('gld_price'))
 
     # Get ratio signals to see which is stronger (1 = bullish, -1 = bearish)
-    tlt_spy_signal = latest.get('pillar_tlt_spy', 0)
-    gld_spy_signal = latest.get('pillar_gld_spy', 0)
+    tlt_spy_signal = int(latest.get('pillar_tlt_spy', 0))
+    gld_spy_signal = int(latest.get('pillar_gld_spy', 0))
 
     # Calculate recent momentum from raw data if available
     data = latest.get('_raw_data', {})
-    tlt_momentum = 0
-    gld_momentum = 0
+    tlt_momentum = 0.0
+    gld_momentum = 0.0
 
     if 'TLT' in data and 'GLD' in data:
         # Calculate 5-period momentum
@@ -70,13 +71,13 @@ def pick_best_safe_haven(latest):
         gld_df = data['GLD']
 
         if len(tlt_df) >= 5:
-            tlt_momentum = (tlt_df['Close'].iloc[-1] / tlt_df['Close'].iloc[-5] - 1) * 100
+            tlt_momentum = float((tlt_df['Close'].iloc[-1] / tlt_df['Close'].iloc[-5] - 1) * 100)
         if len(gld_df) >= 5:
-            gld_momentum = (gld_df['Close'].iloc[-1] / gld_df['Close'].iloc[-5] - 1) * 100
+            gld_momentum = float((gld_df['Close'].iloc[-1] / gld_df['Close'].iloc[-5] - 1) * 100)
 
     # Score each asset (ratio signal + momentum/2)
-    tlt_score = tlt_spy_signal + (tlt_momentum / 2)
-    gld_score = gld_spy_signal + (gld_momentum / 2)
+    tlt_score = float(tlt_spy_signal + (tlt_momentum / 2))
+    gld_score = float(gld_spy_signal + (gld_momentum / 2))
 
     # Pick the stronger one
     if gld_score > tlt_score:
@@ -89,10 +90,10 @@ def pick_best_safe_haven(latest):
 def display_signal(latest):
     """Display signal in compact format"""
     consensus = latest['consensus']
-    spy_rsi = latest['spy_rsi']
-    spy_price = latest['spy_price']
-    tlt_price = latest.get('tlt_price', spy_price)
-    gld_price = latest.get('gld_price', spy_price)
+    spy_rsi = float(latest['spy_rsi'])
+    spy_price = float(latest['spy_price'])
+    tlt_price = float(latest.get('tlt_price', spy_price))
+    gld_price = float(latest.get('gld_price', spy_price))
 
     timestamp = datetime.now().strftime('%H:%M:%S')
 
